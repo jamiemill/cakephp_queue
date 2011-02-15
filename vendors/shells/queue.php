@@ -19,6 +19,8 @@ class queueShell extends Shell {
 	public $QueuedTask;
 	
 	private $taskConf;
+	
+	private $runningAsDaemon = false;
 
 	/**
 	 * Overwrite shell initialize to dynamically load all Queue Related Tasks.
@@ -125,6 +127,10 @@ class queueShell extends Shell {
 		if (isset($this->params['group']) && !empty($this->params['group'])) {
 			$group = $this->params['group'];
 		}
+		if(array_key_exists('-daemon',$this->params)) {
+			$this->_startDaemon();
+		}
+		
 		while (!$exit) {
 			$this->out('Looking for Job....');
 			$data = $this->QueuedTask->requestJob($this->getTaskConf(), $group);
@@ -151,7 +157,11 @@ class queueShell extends Shell {
 					$exit = true;
 				} else {
 					$this->out('nothing to do, sleeping.');
-					sleep(Configure::read('queue.sleeptime'));
+					if($this->runningAsDaemon) {
+						System_Daemon::iterate(Configure::read('queue.sleeptime'));
+					} else {
+						sleep(Configure::read('queue.sleeptime'));
+					}
 				}
 				
 				// check if we are over the maximum runtime and end processing if so.
@@ -228,6 +238,57 @@ class queueShell extends Shell {
 			}
 		}
 		return $this->taskConf;
+	}
+	
+	private function _startDaemon() {
+		if(!App::import('Vendor','system_daemon/System/Daemon')) {
+			$this->err('Could not load System_Daemon.');
+			die();
+		}
+		$options = $this->_getDaemonSettings();
+		System_Daemon::setOptions($options);
+		System_Daemon::start();
+		$this->runningAsDaemon = true;
+		// Reconnect datasource which was lost with parent process.
+		$this->QueuedTask->getDatasource()->connect();
+	}
+	
+	private function _getDaemonSettings() {
+		return array(
+			'appName' => APP_DIR."_queue",
+			'appDir' => APP_PATH,
+			'appDescription' => 'CakePHP queue plugin for '.APP_DIR.' application.',
+			'sysMaxExecutionTime' => '0',
+			'sysMaxInputTime' => '0',
+			'sysMemoryLimit' => '1024M',
+			'appRunAsGID' => 0, // default is root, insecure
+			'appRunAsUID' => 0, // default is root, insecure
+		);
+	}
+	
+	
+	/**
+	* Intercept out() messages and send them to System_Daemon logger if running as a daemon.
+	*/
+	
+	public function out($message = null, $newlines = 1) {
+		if($this->runningAsDaemon) {
+			System_Daemon::info($message);
+		} else {
+			return parent::out($message,$newlines);
+		}
+	}
+	
+	/**
+	* Intercept err() messages and send them to System_Daemon logger if running as a daemon.
+	*/
+	
+	public function err($message = null, $newlines = 1) {
+		if($this->runningAsDaemon) {
+			System_Daemon::err($message);
+		} else {
+			return parent::out($message,$newlines);
+		}
 	}
 }
 ?>
