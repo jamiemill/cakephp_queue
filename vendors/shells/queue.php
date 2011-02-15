@@ -132,7 +132,9 @@ class queueShell extends Shell {
 		}
 		
 		while (!$exit) {
-			$this->out('Looking for Job....');
+			if(!$this->runningAsDaemon) {
+				$this->out('Looking for Job....');
+			}
 			$data = $this->QueuedTask->requestJob($this->getTaskConf(), $group);
 			if ($this->QueuedTask->exit === true) {
 				$exit = true;
@@ -156,10 +158,10 @@ class queueShell extends Shell {
 					$this->out('nothing to do, exiting.');
 					$exit = true;
 				} else {
-					$this->out('nothing to do, sleeping.');
 					if($this->runningAsDaemon) {
 						System_Daemon::iterate(Configure::read('queue.sleeptime'));
 					} else {
+						$this->out('nothing to do, sleeping.');
 						sleep(Configure::read('queue.sleeptime'));
 					}
 				}
@@ -173,7 +175,9 @@ class queueShell extends Shell {
 					$this->out('Performing Old job cleanup.');
 					$this->QueuedTask->cleanOldJobs();
 				}
-				$this->hr();
+				if(!$this->runningAsDaemon) {
+					$this->hr();
+				}
 			}
 		}
 	}
