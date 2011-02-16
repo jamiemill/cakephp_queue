@@ -68,9 +68,11 @@ Run the following using the cakephp shell:
 @cake queue add <taskname>@  
 * Try to call the cli add() function on a task
 * tasks may or may not provide this functionality.
-@cake queue runworker@  
+@cake queue runworker [--daemon]@
 * run a queue worker, which will look for a pending task it can execute.
 * the worker will always try to find jobs matching its installed Tasks
+* if running with --daemon flag, you should install System_Daemon in
+  vendors/system_daemon and you should run this command as root.
          
 *Notes:*
 	_<taskname>_ may either be the complete classname (eg. queue_example)	or the shorthand without the leading "queue_" (eg. example)

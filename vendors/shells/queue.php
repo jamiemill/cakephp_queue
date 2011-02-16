@@ -69,10 +69,12 @@ class queueShell extends Shell {
 		$this->out('	cake queue add <taskname>');
 		$this->out('		-> Try to call the cli add() function on a task');
 		$this->out('		-> tasks may or may not provide this functionality.');
-		$this->out('	cake queue runworker');
+		$this->out('	cake queue runworker [--daemon]');
 		$this->out('		-> run a queue worker, which will look for a pending task it can execute.');
 		$this->out('		-> the worker will always try to find jobs matching its installed Tasks');
 		$this->out('		-> see "Available Tasks" below.');
+		$this->out('		-> if running with --daemon flag, you should install System_Daemon in');
+		$this->out('		   vendors/system_daemon and you should run this command as root.');
 		$this->out('	cake queue stats');
 		$this->out('		-> Display some general Statistics.');
 		$this->out('	cake queue clean');
