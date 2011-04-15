@@ -21,6 +21,8 @@ class queueShell extends Shell {
 	private $taskConf;
 	
 	private $runningAsDaemon = false;
+
+	private $quiet = false;
 	
 	private $exit;
 
@@ -71,12 +73,13 @@ class queueShell extends Shell {
 		$this->out('	cake queue add <taskname>');
 		$this->out('		-> Try to call the cli add() function on a task');
 		$this->out('		-> tasks may or may not provide this functionality.');
-		$this->out('	cake queue runworker [--daemon]');
+		$this->out('	cake queue runworker [--daemon] [--quiet]');
 		$this->out('		-> run a queue worker, which will look for a pending task it can execute.');
 		$this->out('		-> the worker will always try to find jobs matching its installed Tasks');
 		$this->out('		-> see "Available Tasks" below.');
 		$this->out('		-> if running with --daemon flag, you should install System_Daemon in');
 		$this->out('		   vendors/system_daemon and you should run this command as root.');
+		$this->out('		-> the --quiet flag will avoid outputting sleep and cleanup messages.');
 		$this->out('	cake queue stats');
 		$this->out('		-> Display some general Statistics.');
 		$this->out('	cake queue clean');
@@ -134,6 +137,9 @@ class queueShell extends Shell {
 		if(array_key_exists('-daemon',$this->params)) {
 			$this->_startDaemon();
 		}
+		if(array_key_exists('-quiet',$this->params)) {
+			$this->quiet = true;
+		}
 		$this->_registerSignalHandlers();
 		while (!$this->exit) {
 			// Necessary for trapping signals. PHP >= 5.3 can use pcntl_signal_dispatch instead of ticks.
@@ -142,7 +148,7 @@ class queueShell extends Shell {
 			} else {
 				declare(ticks = 1);
 			}
-			if(!$this->runningAsDaemon) {
+			if(!$this->quiet) {
 				$this->out('Looking for Job....');
 			}
 			$data = $this->QueuedTask->requestJob($this->getTaskConf(), $group);
@@ -168,10 +174,12 @@ class queueShell extends Shell {
 					$this->out('nothing to do, exiting.');
 					$this->exit = true;
 				} else {
+					if(!$this->quiet) {
+						$this->out('nothing to do, sleeping.');
+					}
 					if($this->runningAsDaemon) {
 						System_Daemon::iterate(Configure::read('queue.sleeptime'));
 					} else {
-						$this->out('nothing to do, sleeping.');
 						sleep(Configure::read('queue.sleeptime'));
 					}
 				}
@@ -182,10 +190,12 @@ class queueShell extends Shell {
 					$this->out('Reached runtime of ' . (time() - $starttime) . ' Seconds (Max ' . Configure::read('queue.workermaxruntime') . '), terminating.');
 				}
 				if ($this->exit || rand(0, 100) > (100 - Configure::read('queue.gcprop'))) {
-					$this->out('Performing Old job cleanup.');
+					if(!$this->quiet) {
+						$this->out('Performing Old job cleanup.');
+					}
 					$this->QueuedTask->cleanOldJobs();
 				}
-				if(!$this->runningAsDaemon) {
+				if(!$this->quiet) {
 					$this->hr();
 				}
 			}
