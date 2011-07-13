@@ -20,6 +20,8 @@ class queueShell extends Shell {
 	
 	private $taskConf;
 
+	private $exit;
+
 	/**
 	 * Overwrite shell initialize to dynamically load all Queue Related Tasks.
 	 */
@@ -119,17 +121,25 @@ class queueShell extends Shell {
 		if (function_exists('gc_enable')) {
 		    gc_enable();
 		}
-		$exit = false;
+		$this->exit = false;
 		$starttime = time();
 		$group = null;
 		if (isset($this->params['group']) && !empty($this->params['group'])) {
 			$group = $this->params['group'];
 		}
-		while (!$exit) {
+		$this->_registerSignalHandlers();
+		while (!$this->exit) {
+			// Necessary for trapping signals. PHP >= 5.3 can use pcntl_signal_dispatch instead of ticks.
+			if(function_exists('pcntl_signal_dispatch')) {
+				pcntl_signal_dispatch();
+			} else {
+				declare(ticks = 1);
+			}
+			
 			$this->out('Looking for Job....');
 			$data = $this->QueuedTask->requestJob($this->getTaskConf(), $group);
 			if ($this->QueuedTask->exit === true) {
-				$exit = true;
+				$this->exit = true;
 			} else {
 				if ($data !== false) {
 					$this->out('Running Job of type "' . $data['jobtype'] . '"');
@@ -148,7 +158,7 @@ class queueShell extends Shell {
 					}
 				} elseif (Configure::read('queue.exitwhennothingtodo')) {
 					$this->out('nothing to do, exiting.');
-					$exit = true;
+					$this->exit = true;
 				} else {
 					$this->out('nothing to do, sleeping.');
 					sleep(Configure::read('queue.sleeptime'));
@@ -156,10 +166,10 @@ class queueShell extends Shell {
 				
 				// check if we are over the maximum runtime and end processing if so.
 				if (Configure::read('queue.workermaxruntime') != 0 && (time() - $starttime) >= Configure::read('queue.workermaxruntime')) {
-					$exit = true;
+					$this->exit = true;
 					$this->out('Reached runtime of ' . (time() - $starttime) . ' Seconds (Max ' . Configure::read('queue.workermaxruntime') . '), terminating.');
 				}
-				if ($exit || rand(0, 100) > (100 - Configure::read('queue.gcprop'))) {
+				if ($this->exit || rand(0, 100) > (100 - Configure::read('queue.gcprop'))) {
 					$this->out('Performing Old job cleanup.');
 					$this->QueuedTask->cleanOldJobs();
 				}
@@ -229,5 +239,21 @@ class queueShell extends Shell {
 		}
 		return $this->taskConf;
 	}
+
+	function _registerSignalHandlers() {
+		pcntl_signal(SIGTERM, array($this,'_onSIGTERM'));
+		pcntl_signal(SIGINT, array($this,'_onSIGINT'));
+	}
+
+	function _onSIGTERM() {
+		$this->out('Received shutdown signal.');
+		$this->exit = true;
+	}
+
+	function _onSIGINT() {
+		$this->out('Received interrupt from keyboard.');
+		$this->exit = true;
+	}
+
 }
 ?>
