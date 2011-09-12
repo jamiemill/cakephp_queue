@@ -267,5 +267,10 @@ class queueShell extends Shell {
 		$this->exit = true;
 	}
 
+	function out($str='') {
+		$str = date('Y-m-d H:i:s').' '.$str;
+		return parent::out($str);
+	}
+
 }
 ?>
