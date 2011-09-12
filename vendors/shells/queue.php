@@ -22,6 +22,8 @@ class queueShell extends Shell {
 
 	private $exit;
 
+	protected $_verbose = false;
+
 	/**
 	 * Overwrite shell initialize to dynamically load all Queue Related Tasks.
 	 */
@@ -55,6 +57,10 @@ class queueShell extends Shell {
 			'cleanuptimeout' => 2000,
 			'exitwhennothingtodo' => false
 		), $conf));
+
+		if(isset($this->params['-verbose'])) {
+			$this->_verbose = true;
+		}
 	}
 
 	/**
@@ -69,7 +75,7 @@ class queueShell extends Shell {
 		$this->out('	cake queue add <taskname>');
 		$this->out('		-> Try to call the cli add() function on a task');
 		$this->out('		-> tasks may or may not provide this functionality.');
-		$this->out('	cake queue runworker');
+		$this->out('	cake queue runworker [--verbose]');
 		$this->out('		-> run a queue worker, which will look for a pending task it can execute.');
 		$this->out('		-> the worker will always try to find jobs matching its installed Tasks');
 		$this->out('		-> see "Available Tasks" below.');
@@ -136,7 +142,9 @@ class queueShell extends Shell {
 				declare(ticks = 1);
 			}
 			
-			$this->out('Looking for Job....');
+			if($this->_verbose) {
+				$this->out('Looking for Job....');
+			}
 			$data = $this->QueuedTask->requestJob($this->getTaskConf(), $group);
 			if ($this->QueuedTask->exit === true) {
 				$this->exit = true;
@@ -160,7 +168,9 @@ class queueShell extends Shell {
 					$this->out('nothing to do, exiting.');
 					$this->exit = true;
 				} else {
-					$this->out('nothing to do, sleeping.');
+					if($this->_verbose) {
+						$this->out('nothing to do, sleeping.');
+					}
 					sleep(Configure::read('queue.sleeptime'));
 				}
 				
@@ -173,7 +183,9 @@ class queueShell extends Shell {
 					$this->out('Performing Old job cleanup.');
 					$this->QueuedTask->cleanOldJobs();
 				}
-				$this->hr();
+				if($this->_verbose) {
+					$this->hr();
+				}
 			}
 		}
 	}
