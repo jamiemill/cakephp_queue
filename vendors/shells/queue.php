@@ -152,7 +152,7 @@ class queueShell extends Shell {
 				if ($data !== false) {
 					$this->out('Running Job of type "' . $data['jobtype'] . '"');
 					$taskname = 'queue_' . strtolower($data['jobtype']);
-					$return = $this->{$taskname}->run(unserialize($data['data']));
+					$return = $this->_runTask($taskname,unserialize($data['data']));
 					if ($return == true) {
 						$this->QueuedTask->markJobDone($data['id']);
 						$this->out('Job Finished.');
@@ -250,6 +250,34 @@ class queueShell extends Shell {
 			}
 		}
 		return $this->taskConf;
+	}
+
+	/**
+	 * Triggers a queued task in a subprocess so that it has a clean starting state.
+	 * Returns true if it completes with a zero exit code and false otherwise.
+	 */
+	protected function _runTask($taskname,$data) {
+		chdir(APP);
+		$cmd = "cake queue run $taskname ".escapeshellarg(json_encode($data));
+		$this->out("Executing subprocess: $cmd");
+		passthru($cmd,$return);
+		return $return == 0;
+	}
+
+	/**
+	 * Usually called as a subprocess created by _runTask.
+	 * Runs a single task and exits.
+	 */
+	public function run() {
+		$taskname = $this->args[0];
+		$jsonData = $this->args[1];
+		$this->out('Running task:'.$taskname.' with data:'.$jsonData);
+		$success = $this->{$taskname}->run(json_decode($jsonData,true));
+		if($success) {
+			exit(0);
+		} else {
+			exit(1);
+		}
 	}
 
 	function _registerSignalHandlers() {
