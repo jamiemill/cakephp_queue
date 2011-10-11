@@ -281,8 +281,10 @@ class queueShell extends Shell {
 	}
 
 	function _registerSignalHandlers() {
-		pcntl_signal(SIGTERM, array($this,'_onSIGTERM'));
-		pcntl_signal(SIGINT, array($this,'_onSIGINT'));
+		if (function_exists('pcntl_signal')) {
+			pcntl_signal(SIGTERM, array($this,'_onSIGTERM'));
+			pcntl_signal(SIGINT, array($this,'_onSIGINT'));
+		}
 	}
 
 	function _onSIGTERM() {
