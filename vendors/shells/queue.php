@@ -258,7 +258,7 @@ class queueShell extends Shell {
 	 */
 	protected function _runTask($taskname,$data) {
 		chdir(APP);
-		$cmd = "cake queue run $taskname ".escapeshellarg(json_encode($data));
+		$cmd = CAKE."console/cake queue run $taskname ".escapeshellarg(json_encode($data));
 		$this->out("Executing subprocess: $cmd");
 		passthru($cmd,$return);
 		return $return == 0;
