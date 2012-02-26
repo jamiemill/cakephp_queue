@@ -123,6 +123,12 @@ class queueShell extends Shell {
 	 * which it may run and try to fetch and execute them.
 	 */
 	public function runworker() {
+		// write pidfile
+		if(!empty($this->params['pidfile'])) {
+			$fp = fopen($this->params['pidfile'], "w");
+			fwrite($fp, posix_getpid());
+			fclose($fp);
+		}
 		// Enable Garbage Collector (PHP >= 5.3)
 		if (function_exists('gc_enable')) {
 		    gc_enable();
@@ -187,6 +193,9 @@ class queueShell extends Shell {
 					$this->hr();
 				}
 			}
+		}
+		if(!empty($this->params['pidfile'])) {
+			unlink($this->params['pidfile']);
 		}
 	}
 
