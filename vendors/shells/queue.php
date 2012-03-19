@@ -133,6 +133,10 @@ class queueShell extends Shell {
 		if (function_exists('gc_enable')) {
 		    gc_enable();
 		}
+
+		// Disable datasource cache as this is a long-running process.
+		ConnectionManager::getDataSource('default')->cacheMethods = false;
+
 		$this->exit = false;
 		$starttime = time();
 		$group = null;
